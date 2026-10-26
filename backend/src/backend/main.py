@@ -1,50 +1,48 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from database import add_todo, get_todo, get_all_todo, update_todo, delete_todo, Todo
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI()
-
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
-print(add_todo('123'))
-print(get_todo(1))
-print(add_todo('321'))
-print(add_todo('5654'))
-print(add_todo('98871'))
-print(update_todo(1, 'now done', True))
-print(get_all_todo())
+from backend.db import init_db
+from backend.exceptions import register_exception_handlers
+from backend.logging_config import configure_logging
+from backend.middleware import RequestIdMiddleware
+from backend.routers import todos
+from backend.settings import get_settings
 
 
-@app.get("/todo/read/{todo_id}", response_model=None)
-def read_todo_endpoint(todo_id: str):
-    todo = get_todo(int(todo_id))
-
-    return todo
-
-
-@app.get("/todo/read", response_model=None)
-def read_all_todo_endpoint(q: str | None):
-    print(q)
-    todos = get_all_todo(q)
-
-    return list(map(lambda todo: Todo(id=todo[0], body=todo[1], done=todo[2]), todos))
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    init_db()
+    yield
 
 
-@app.post("/todo/create", response_model=None)
-def create_todo_endpoint(body: Todo):
-    todo = add_todo(body.body)
-    return todo
+def create_app() -> FastAPI:
+    settings = get_settings()
+    app = FastAPI(
+        title="PythonTodo API",
+        version="0.1.0",
+        lifespan=lifespan,
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["X-Total-Count", "X-Request-ID"],
+    )
+    app.add_middleware(RequestIdMiddleware)
+    register_exception_handlers(app)
+    app.include_router(todos.router)
+
+    @app.get("/health")
+    def health() -> dict[str, str]:
+        return {"status": "ok"}
+
+    return app
 
 
-@app.patch("/todo/update/{todo_id}", response_model=None)
-def update_todo_endpoint(todo_id: str, body: Todo):
-    todo = update_todo(int(todo_id), body.body, body.done)
-    return todo
-
-
-@app.delete("/todo/delete/{todo_id}", response_model=None)
-def delete_todo_endpoint(todo_id: str):
-    return delete_todo(int(todo_id))
+app = create_app()

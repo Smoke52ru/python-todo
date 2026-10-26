@@ -19,6 +19,9 @@ export function SearchBar({
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') onChange('')
+        }}
         placeholder={placeholder}
       />
     </div>

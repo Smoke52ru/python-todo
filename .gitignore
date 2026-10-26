@@ -4,6 +4,10 @@ __pycache__/
 *.egg-info/
 .venv/
 backend/.venv/
+.pytest_cache/
+.ruff_cache/
+backend/todo.db
+backend/*.db
 
 # Node / frontend
 node_modules/
@@ -12,18 +16,20 @@ frontend/dist/
 dist/
 dist-ssr/
 *.local
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+frontend/openapi.json
 
 # Local DB / secrets
 *.db
 .env
 .env.*
+!.env.example
+!**/.env.example
 
 # Editors / OS
 .idea/
 .vscode/
 .DS_Store
 *.swp
-*$
-
-# Accidental empty files
-backend/$
